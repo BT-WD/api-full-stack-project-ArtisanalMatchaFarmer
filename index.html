@@ -5,80 +5,80 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>API Full Stack Project</title>
     <link rel="stylesheet" href="index.css">
+    <!-- ADDED: inline style to hide empty feedback area (can also be in CSS file) -->
+    <style>
+      .feedback-area:empty {
+        display: none;
+      }
+    </style>
   </head>
   <body>
     <div class="quiz-app">
-    <!-- Header: title + static score placeholder -->
-    <header class="quiz-header">
-      <div class="brand">
-        <h1>📚 Trivia<span>API</span></h1>
-        <p>dynamic quiz – ready for integration</p>
-      </div>
-      <div class="score-mock">
-        <span class="score-label">⭐ SCORE</span>
-        <span id="static-score-demo" class="score-value">0</span>
-      </div>
-    </header>
-
-    <!-- MAIN DATA CONTAINER – all dynamic content will be injected here later -->
-    <div id="data-container">
-      
-      <!-- meta row: category, difficulty, question number -->
-      <div class="meta-row">
-        <div class="meta-badge" id="category-display">
-          <span class="meta-icon">📂</span> Category: <strong>Science & Nature</strong>
+      <header class="quiz-header">
+        <div class="brand">
+          <h1>📚 Trivia<span>API</span></h1>
+          <p>dynamic quiz – ready for integration</p>
         </div>
-        <div class="meta-badge" id="difficulty-display">
-          <span class="meta-icon">⚙️</span> Difficulty: <strong>Medium</strong>
+        <div class="score-mock">
+          <span class="score-label">⭐ SCORE</span>
+          <span id="quiz-score" class="score-value">0</span>
         </div>
-        <div class="meta-badge" id="question-counter">
-          <span class="meta-icon">🔢</span> Question: <strong>3 / 10</strong>
+      </header>
+
+      <div id="data-container">
+        <div class="meta-row">
+          <div class="meta-badge" id="category-display">
+            <span class="meta-icon">📂</span> Category: <strong>Science & Nature</strong>
+          </div>
+          <div class="meta-badge" id="difficulty-display">
+            <span class="meta-icon">⚙️</span> Difficulty: <strong>Medium</strong>
+          </div>
+          <div class="meta-badge" id="question-counter">
+            <span class="meta-icon">🔢</span> Question: <strong>3 / 10</strong>
+          </div>
         </div>
-      </div>
 
-      <!-- question text -->
-      <div class="question-card">
-        <p class="question-text" id="question-text">
-          Which of these is the largest ocean on Earth?
-        </p>
-      </div>
-
-      <!-- multiple choice answers (radio buttons) -->
-      <div class="answers-section">
-        <div class="answers-list" id="answers-container">
-          <label class="answer-option">
-            <input type="radio" name="quiz-answer" value="Atlantic Ocean"> Atlantic Ocean
-          </label>
-          <label class="answer-option">
-            <input type="radio" name="quiz-answer" value="Indian Ocean"> Indian Ocean
-          </label>
-          <label class="answer-option">
-            <input type="radio" name="quiz-answer" value="Arctic Ocean"> Arctic Ocean
-          </label>
-          <label class="answer-option">
-            <input type="radio" name="quiz-answer" value="Pacific Ocean"> Pacific Ocean
-          </label>
+        <div class="question-card">
+          <p class="question-text" id="question-text">
+            Which of these is the largest ocean on Earth?
+          </p>
         </div>
+
+        <div class="answers-section">
+          <div class="answers-list" id="answers-container">
+            <label class="answer-option">
+              <input type="radio" name="quiz-answer" value="Atlantic Ocean"> Atlantic Ocean
+            </label>
+            <label class="answer-option">
+              <input type="radio" name="quiz-answer" value="Indian Ocean"> Indian Ocean
+            </label>
+            <label class="answer-option">
+              <input type="radio" name="quiz-answer" value="Arctic Ocean"> Arctic Ocean
+            </label>
+            <label class="answer-option">
+              <input type="radio" name="quiz-answer" value="Pacific Ocean"> Pacific Ocean
+            </label>
+          </div>
+        </div>
+
+        <!-- feedback area: hidden when empty -->
+        <div id="feedback-message" class="feedback-area"></div>
+
+        <div class="action-bar">
+          <button id="submit-btn" class="btn btn-primary">✔️ Submit answer</button>
+          <button id="next-btn" class="btn btn-secondary">⏩ Next question</button>
+          <button id="reset-btn" class="btn btn-outline">⟳ Restart quiz</button>
+        </div>
+
+        <!-- REMOVED: <div class="api-hint">... (deleted) -->
       </div>
 
-      <!-- action buttons (no JavaScript yet) -->
-      <div class="action-bar">
-        <button id="submit-btn" class="btn btn-primary">✔️ Submit answer</button>
-        <button id="next-btn" class="btn btn-secondary">⏩ Next question</button>
-        <button id="reset-btn" class="btn btn-outline">⟳ Restart quiz</button>
-      </div>
-
-      <!-- note: placeholder info for developers -->
-      <div class="api-hint">
-        💡 Replace the static content inside #data-container with live TriviaAPI data.
-        IDs like #question-text, #answers-container, #category-display are ready to use.
-      </div>
+      <footer class="quiz-footer">
+        <!-- Updated footer to reflect current functionality -->
+        <p>Powered by The Trivia API · No penalty for skipping · Wrong answers reveal correct answer</p>
+      </footer>
     </div>
 
-    <!-- footer (static) -->
-    <footer class="quiz-footer">
-      <p>TriviaAPI demo layout · no active JS · add your own logic later</p>
-    </footer>
-  </div>
+    <script src="index.js"></script>
   </body>
 </html>

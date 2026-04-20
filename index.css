@@ -240,6 +240,19 @@ body {
   border-left: 4px solid #8aaec0;
 }
 
+.feedback-area {
+  margin: 0.5rem 0 1rem;
+  padding: 0.7rem;
+  border-radius: 1rem;
+  background: #fef9e6;
+  color: #8a6e2f;
+  text-align: center;
+  font-size: 0.9rem;
+  font-weight: 500;
+  transition: all 0.2s;
+  min-height: 3.5rem;
+}
+
 /* footer */
 .quiz-footer {
   background: #f8fafc;
