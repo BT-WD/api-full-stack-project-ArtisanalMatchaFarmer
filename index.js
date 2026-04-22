@@ -6,9 +6,10 @@ let currentQuestionIndex = 1;
 const TOTAL_QUESTIONS = 10;
 let currentScore = 0;
 let questionAnswered = false;
+let isWaitingForNext = false;
 let isFetching = false;
 
-// DOM elements
+// DOM elements (no nextBtn)
 const questionTextEl = document.getElementById('question-text');
 const answersContainer = document.getElementById('answers-container');
 const categoryDisplay = document.getElementById('category-display');
@@ -16,17 +17,11 @@ const difficultyDisplay = document.getElementById('difficulty-display');
 const questionCounterEl = document.getElementById('question-counter');
 const scoreSpan = document.getElementById('quiz-score');
 const submitBtn = document.getElementById('submit-btn');
-const nextBtn = document.getElementById('next-btn');
 const resetBtn = document.getElementById('reset-btn');
 const feedbackDiv = document.getElementById('feedback-message');
 
-function updateScoreUI() {
-    scoreSpan.textContent = currentScore;
-}
-
-function updateCounterUI() {
-    questionCounterEl.innerHTML = `<span class="meta-icon">🔢</span> Question: <strong>${currentQuestionIndex} / ${TOTAL_QUESTIONS}</strong>`;
-}
+function updateScoreUI() { scoreSpan.textContent = currentScore; }
+function updateCounterUI() { questionCounterEl.innerHTML = `<span class="meta-icon">🔢</span> Question: <strong>${currentQuestionIndex} / ${TOTAL_QUESTIONS}</strong>`; }
 
 let feedbackTimeout = null;
 function showFeedback(message, isError = false) {
@@ -34,9 +29,7 @@ function showFeedback(message, isError = false) {
     feedbackDiv.textContent = message;
     feedbackDiv.style.background = isError ? '#ffe6e5' : '#fef9e6';
     feedbackDiv.style.color = isError ? '#b13e3e' : '#8a6e2f';
-    feedbackTimeout = setTimeout(() => {
-        if (feedbackDiv) feedbackDiv.textContent = '';
-    }, 2000);
+    feedbackTimeout = setTimeout(() => { feedbackDiv.textContent = ''; }, 2000);
 }
 
 function shuffleArray(arr) {
@@ -57,7 +50,7 @@ function renderAnswerOptions() {
         radio.type = 'radio';
         radio.name = 'quiz-answer';
         radio.value = answerText;
-        radio.disabled = questionAnswered;  // only disabled after answering
+        radio.disabled = questionAnswered || isWaitingForNext;
         label.appendChild(radio);
         label.appendChild(document.createTextNode(answerText));
         answersContainer.appendChild(label);
@@ -65,10 +58,8 @@ function renderAnswerOptions() {
 }
 
 function setAnswersEnabled(enabled) {
-    const radios = document.querySelectorAll('#answers-container input[type="radio"]');
-    radios.forEach(radio => radio.disabled = !enabled);
+    document.querySelectorAll('#answers-container input[type="radio"]').forEach(radio => radio.disabled = !enabled);
 }
-
 function clearSelectedAnswer() {
     const selected = document.querySelector('#answers-container input[type="radio"]:checked');
     if (selected) selected.checked = false;
@@ -81,7 +72,6 @@ function decodeHtml(html) {
     return txt.value;
 }
 
-// Fetch with retry (up to 3 attempts)
 async function fetchQuestionWithRetry(attempts = 3) {
     for (let i = 0; i < attempts; i++) {
         try {
@@ -98,7 +88,7 @@ async function fetchQuestionWithRetry(attempts = 3) {
                     difficulty: result.difficulty.charAt(0).toUpperCase() + result.difficulty.slice(1)
                 };
             } else {
-                console.warn(`Attempt ${i+1}: API returned response_code ${data.response_code}`);
+                console.warn(`Attempt ${i+1}: response_code ${data.response_code}`);
                 await new Promise(resolve => setTimeout(resolve, 500));
             }
         } catch (err) {
@@ -107,7 +97,7 @@ async function fetchQuestionWithRetry(attempts = 3) {
             await new Promise(resolve => setTimeout(resolve, 500));
         }
     }
-    throw new Error('Could not fetch a valid question after multiple attempts');
+    throw new Error('Could not fetch a valid question');
 }
 
 async function fetchQuestion() {
@@ -116,22 +106,18 @@ async function fetchQuestion() {
     try {
         questionTextEl.textContent = 'Loading next question...';
         submitBtn.disabled = true;
-        nextBtn.disabled = true;
         setAnswersEnabled(false);
-
         const questionObj = await fetchQuestionWithRetry(3);
         return questionObj;
     } catch (err) {
         console.error('Fetch error:', err);
-        showFeedback('❌ Failed to load question. Please check your connection or try again.', true);
+        showFeedback('❌ Failed to load question. Please check your connection.', true);
         questionTextEl.textContent = '⚠️ Unable to fetch question. Click "Restart quiz" to retry.';
         submitBtn.disabled = true;
-        nextBtn.disabled = true;
         return null;
     } finally {
         isFetching = false;
         submitBtn.disabled = false;
-        nextBtn.disabled = false;
     }
 }
 
@@ -139,6 +125,7 @@ async function loadNewQuestion() {
     questionAnswered = false;
     if (feedbackTimeout) clearTimeout(feedbackTimeout);
     feedbackDiv.textContent = '';
+    isWaitingForNext = false;
     clearSelectedAnswer();
 
     const qData = await fetchQuestion();
@@ -146,8 +133,7 @@ async function loadNewQuestion() {
 
     currentQuestionData = qData;
     currentCorrectAnswer = qData.correctAnswer;
-    const allAnswers = [qData.correctAnswer, ...qData.incorrectAnswers];
-    currentAnswersArray = shuffleArray([...allAnswers]);
+    currentAnswersArray = shuffleArray([qData.correctAnswer, ...qData.incorrectAnswers]);
 
     questionTextEl.textContent = qData.question;
     categoryDisplay.innerHTML = `<span class="meta-icon">📂</span> Category: <strong>${escapeHtml(qData.category)}</strong>`;
@@ -156,7 +142,6 @@ async function loadNewQuestion() {
     renderAnswerOptions();
     setAnswersEnabled(true);
     submitBtn.disabled = false;
-    nextBtn.disabled = false;
 }
 
 async function proceedToNextQuestion() {
@@ -173,31 +158,27 @@ function endGame() {
     questionTextEl.textContent = `🏆 Quiz completed! Your final score: ${currentScore} / ${TOTAL_QUESTIONS}`;
     answersContainer.innerHTML = '<div style="text-align:center; padding:1rem;">🎉 Great job! Press Restart to play again.</div>';
     submitBtn.disabled = true;
-    nextBtn.disabled = true;
     setAnswersEnabled(false);
     showFeedback(`Game over! Final score: ${currentScore} out of ${TOTAL_QUESTIONS}`, false);
 }
 
-// Submit: only checks answer, no auto-advance
+// SUBMIT: checks answer, updates score, then auto-advances after 1.5 seconds
 function handleSubmit() {
     if (questionAnswered) {
-        showFeedback('You already answered this question! Click Next to continue.', false);
+        showFeedback('Already answered! Loading next...', false);
         return;
     }
-    if (isFetching) {
-        showFeedback('Please wait, loading question...', false);
+    if (isWaitingForNext || isFetching) {
+        showFeedback('Please wait...', false);
         return;
     }
-
     const selectedRadio = document.querySelector('#answers-container input[type="radio"]:checked');
     if (!selectedRadio) {
-        showFeedback('Please select an answer before submitting.', true);
+        showFeedback('Please select an answer.', true);
         return;
     }
-
     const userAnswer = selectedRadio.value;
     const isCorrect = (userAnswer === currentCorrectAnswer);
-
     if (isCorrect) {
         currentScore++;
         updateScoreUI();
@@ -205,33 +186,24 @@ function handleSubmit() {
     } else {
         showFeedback(`❌ Wrong! The correct answer is: ${currentCorrectAnswer}`, false);
     }
-
-    // Mark as answered, disable radios & submit button
     questionAnswered = true;
     setAnswersEnabled(false);
     submitBtn.disabled = true;
-    // Next button remains enabled – user must click it manually
-}
+    isWaitingForNext = true;
 
-// Next button: moves to next question (no penalty, no auto-advance)
-function handleNext() {
-    if (isFetching) {
-        showFeedback('Please wait, loading question...', false);
-        return;
-    }
-    if (currentQuestionIndex === TOTAL_QUESTIONS) {
-        // If game already finished, do nothing or restart? We'll just ignore.
-        if (questionTextEl.textContent.includes('Quiz completed')) {
-            showFeedback('Quiz is already finished. Press Restart to play again.', false);
-            return;
+    setTimeout(async () => {
+        if (currentQuestionIndex === TOTAL_QUESTIONS) {
+            endGame();
+        } else {
+            await proceedToNextQuestion();
         }
-    }
-    // Allow moving even if question not answered (no penalty)
-    proceedToNextQuestion();
+        isWaitingForNext = false;
+    }, 1500);
 }
 
 async function resetQuiz() {
     if (feedbackTimeout) clearTimeout(feedbackTimeout);
+    isWaitingForNext = false;
     isFetching = false;
     currentScore = 0;
     currentQuestionIndex = 1;
@@ -239,29 +211,19 @@ async function resetQuiz() {
     updateScoreUI();
     updateCounterUI();
     feedbackDiv.textContent = '';
-
     submitBtn.disabled = false;
-    nextBtn.disabled = false;
     await loadNewQuestion();
     showFeedback('🔄 Quiz restarted! Good luck.', false);
 }
 
 function escapeHtml(str) {
     if (!str) return '';
-    return str.replace(/[&<>]/g, function(m) {
-        if (m === '&') return '&amp;';
-        if (m === '<') return '&lt;';
-        if (m === '>') return '&gt;';
-        return m;
-    });
+    return str.replace(/[&<>]/g, m => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;' }[m] || m));
 }
 
-// Event listeners
 submitBtn.addEventListener('click', handleSubmit);
-nextBtn.addEventListener('click', handleNext);
 resetBtn.addEventListener('click', resetQuiz);
 
-// Initial load
 (async function init() {
     await loadNewQuestion();
     updateCounterUI();

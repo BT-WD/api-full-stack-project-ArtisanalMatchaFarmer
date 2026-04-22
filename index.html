@@ -3,13 +3,10 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>API Full Stack Project</title>
+    <title>Trivia Quiz · No Next Button</title>
     <link rel="stylesheet" href="index.css">
-    <!-- ADDED: inline style to hide empty feedback area (can also be in CSS file) -->
     <style>
-      .feedback-area:empty {
-        display: none;
-      }
+      .feedback-area:empty { display: none; }
     </style>
   </head>
   <body>
@@ -17,7 +14,7 @@
       <header class="quiz-header">
         <div class="brand">
           <h1>📚 Trivia<span>API</span></h1>
-          <p>dynamic quiz – ready for integration</p>
+          <p>auto‑advance after answer</p>
         </div>
         <div class="score-mock">
           <span class="score-label">⭐ SCORE</span>
@@ -34,51 +31,30 @@
             <span class="meta-icon">⚙️</span> Difficulty: <strong>Medium</strong>
           </div>
           <div class="meta-badge" id="question-counter">
-            <span class="meta-icon">🔢</span> Question: <strong>3 / 10</strong>
+            <span class="meta-icon">🔢</span> Question: <strong>0 / 10</strong>
           </div>
         </div>
 
         <div class="question-card">
-          <p class="question-text" id="question-text">
-            Which of these is the largest ocean on Earth?
-          </p>
+          <p class="question-text" id="question-text">Loading...</p>
         </div>
 
         <div class="answers-section">
-          <div class="answers-list" id="answers-container">
-            <label class="answer-option">
-              <input type="radio" name="quiz-answer" value="Atlantic Ocean"> Atlantic Ocean
-            </label>
-            <label class="answer-option">
-              <input type="radio" name="quiz-answer" value="Indian Ocean"> Indian Ocean
-            </label>
-            <label class="answer-option">
-              <input type="radio" name="quiz-answer" value="Arctic Ocean"> Arctic Ocean
-            </label>
-            <label class="answer-option">
-              <input type="radio" name="quiz-answer" value="Pacific Ocean"> Pacific Ocean
-            </label>
-          </div>
+          <div class="answers-list" id="answers-container"></div>
         </div>
 
-        <!-- feedback area: hidden when empty -->
         <div id="feedback-message" class="feedback-area"></div>
 
         <div class="action-bar">
           <button id="submit-btn" class="btn btn-primary">✔️ Submit answer</button>
-          <button id="next-btn" class="btn btn-secondary">⏩ Next question</button>
           <button id="reset-btn" class="btn btn-outline">⟳ Restart quiz</button>
         </div>
-
-        <!-- REMOVED: <div class="api-hint">... (deleted) -->
       </div>
 
       <footer class="quiz-footer">
-        <!-- Updated footer to reflect current functionality -->
-        <p>Powered by The Trivia API · No penalty for skipping · Wrong answers reveal correct answer</p>
+        <p>Submit answer → auto‑load next question</p>
       </footer>
     </div>
-
-    <script src="index.js"></script>
+    <script src="script.js"></script>
   </body>
 </html>
