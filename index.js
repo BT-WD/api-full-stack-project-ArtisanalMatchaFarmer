@@ -1,15 +1,20 @@
 // ---------- GLOBALS ----------
-let quizQuestions = [];            // array of 10 question objects
-let currentQuestionIndex = 0;      // 0-based index
+let quizQuestions = [];
+let currentQuestionIndex = 0;
 const TOTAL_QUESTIONS = 10;
 let currentScore = 0;
-let questionStartTime = null;      // timestamp when current question was shown
-let results = new Array(TOTAL_QUESTIONS).fill(null); // stores { time, correct, questionText, correctAnswer }
+let questionStartTime = null;
+let results = new Array(TOTAL_QUESTIONS).fill(null);
 let questionAnswered = false;
 let isWaitingForNext = false;
 let isFetching = false;
 
-// DOM elements
+// DOM elements (quiz area)
+const quizContent = document.getElementById('quiz-content');
+const startScreen = document.getElementById('start-screen');
+const startBtn = document.getElementById('start-btn');
+const difficultySelect = document.getElementById('difficulty-select');
+const categorySelect = document.getElementById('category-select');
 const questionTextEl = document.getElementById('question-text');
 const answersContainer = document.getElementById('answers-container');
 const categoryDisplay = document.getElementById('category-display');
@@ -20,6 +25,7 @@ const submitBtn = document.getElementById('submit-btn');
 const resetBtn = document.getElementById('reset-btn');
 const feedbackDiv = document.getElementById('feedback-message');
 
+// Helper: update UI (score + counter)
 function updateUI() {
     scoreSpan.textContent = currentScore;
     questionCounterEl.innerHTML = `<span class="meta-icon">🔢</span> Question: <strong>${currentQuestionIndex + 1} / ${TOTAL_QUESTIONS}</strong>`;
@@ -76,11 +82,14 @@ function decodeHtml(html) {
     return txt.value;
 }
 
-// ----- Fetch 10 questions with retries (max 5 attempts) -----
-async function fetchTenQuestions(attempt = 1) {
+// ----- Fetch 10 questions with selected difficulty & category (retry up to 5 times) -----
+async function fetchTenQuestions(difficulty = '', category = '', attempt = 1) {
     const maxAttempts = 5;
+    let url = `https://opentdb.com/api.php?amount=${TOTAL_QUESTIONS}&type=multiple`;
+    if (difficulty) url += `&difficulty=${difficulty}`;
+    if (category) url += `&category=${category}`;
     try {
-        const response = await fetch(`https://opentdb.com/api.php?amount=${TOTAL_QUESTIONS}&type=multiple`);
+        const response = await fetch(url);
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
         const data = await response.json();
         if (data.response_code === 0 && data.results && data.results.length === TOTAL_QUESTIONS) {
@@ -99,37 +108,48 @@ async function fetchTenQuestions(attempt = 1) {
         if (attempt < maxAttempts) {
             showFeedback(`Retrying fetch (attempt ${attempt + 1}/${maxAttempts})...`, false);
             await new Promise(resolve => setTimeout(resolve, 1000));
-            return fetchTenQuestions(attempt + 1);
+            return fetchTenQuestions(difficulty, category, attempt + 1);
         } else {
             throw new Error(`Failed to fetch 10 questions after ${maxAttempts} attempts. Please restart.`);
         }
     }
 }
 
-// ----- Load/store questions in localStorage -----
-async function loadOrFetchQuestions() {
-    const stored = localStorage.getItem('triviaQuizQuestions');
-    if (stored) {
-        try {
-            const parsed = JSON.parse(stored);
-            if (Array.isArray(parsed) && parsed.length === TOTAL_QUESTIONS) {
-                console.log('Using questions from localStorage');
-                return parsed;
-            }
-        } catch (e) {}
+// ----- Start quiz: hide start screen, fetch questions, store in localStorage -----
+async function startQuiz() {
+    const difficulty = difficultySelect.value;
+    const category = categorySelect.value;
+    // Show loading inside start screen (optional)
+    startBtn.disabled = true;
+    startBtn.textContent = 'Loading...';
+    try {
+        const freshQuestions = await fetchTenQuestions(difficulty, category);
+        quizQuestions = freshQuestions;
+        // Store questions and preferences in localStorage
+        localStorage.setItem('triviaQuizQuestions', JSON.stringify(freshQuestions));
+        localStorage.setItem('triviaQuizDifficulty', difficulty);
+        localStorage.setItem('triviaQuizCategory', category);
+        // Reset state
+        currentQuestionIndex = 0;
+        currentScore = 0;
+        results = new Array(TOTAL_QUESTIONS).fill(null);
+        questionAnswered = false;
+        isWaitingForNext = false;
+        updateUI();
+        displayCurrentQuestion();
+        // Switch UI
+        startScreen.style.display = 'none';
+        quizContent.style.display = 'block';
+        showFeedback('Quiz started! Good luck.', false);
+    } catch (err) {
+        console.error('Start failed:', err);
+        showFeedback(`❌ Failed to load questions: ${err.message}. Please try again.`, true);
+        startBtn.disabled = false;
+        startBtn.textContent = 'Start Quiz';
     }
-    console.log('Fetching fresh questions from API');
-    const fresh = await fetchTenQuestions();
-    localStorage.setItem('triviaQuizQuestions', JSON.stringify(fresh));
-    return fresh;
 }
 
-// ----- Save results to localStorage after each answer -----
-function saveResultsToLocalStorage() {
-    localStorage.setItem('triviaQuizResults', JSON.stringify(results));
-}
-
-// ----- Display current question -----
+// ----- Display current question (from quizQuestions array) -----
 function displayCurrentQuestion() {
     if (!quizQuestions.length || currentQuestionIndex >= quizQuestions.length) {
         endGame();
@@ -143,13 +163,11 @@ function displayCurrentQuestion() {
     setAnswersEnabled(true);
     submitBtn.disabled = false;
     questionAnswered = false;
-    // Start timing
     questionStartTime = performance.now();
 }
 
-// ----- End game: show score + fastest correct answer (time, question, correct answer) -----
+// ----- End game: show score + fastest correct answer -----
 function endGame() {
-    // Find fastest correct answer (lowest time > 0)
     let fastestTime = Infinity;
     let fastestIndex = -1;
     for (let i = 0; i < TOTAL_QUESTIONS; i++) {
@@ -159,7 +177,6 @@ function endGame() {
             fastestIndex = i;
         }
     }
-
     let fastestMsg = '';
     if (fastestIndex !== -1) {
         const fastestResult = results[fastestIndex];
@@ -170,7 +187,6 @@ function endGame() {
     } else {
         fastestMsg = '<br><br>⚠️ No correct answers recorded.';
     }
-
     questionTextEl.innerHTML = `🏆 Quiz completed! Your final score: ${currentScore} / ${TOTAL_QUESTIONS}${fastestMsg}`;
     answersContainer.innerHTML = '<div style="text-align:center; padding:1rem;">🎉 Great job! Press Restart to play again.</div>';
     submitBtn.disabled = true;
@@ -178,7 +194,7 @@ function endGame() {
     showFeedback(`Game over! Final score: ${currentScore} out of ${TOTAL_QUESTIONS}`, false);
 }
 
-// ----- Move to next question (auto-advance after answer) -----
+// ----- Move to next question (auto-advance) -----
 async function proceedToNextQuestion() {
     if (currentQuestionIndex + 1 >= TOTAL_QUESTIONS) {
         endGame();
@@ -208,27 +224,23 @@ function handleSubmit() {
         showFeedback('Please wait...', false);
         return;
     }
-
     const selectedRadio = document.querySelector('#answers-container input[type="radio"]:checked');
     if (!selectedRadio) {
         showFeedback('Please select an answer.', true);
         return;
     }
-
-    // Stop timing
     const timeTaken = (performance.now() - questionStartTime) / 1000;
     const currentQ = quizQuestions[currentQuestionIndex];
     const userAnswer = selectedRadio.value;
     const isCorrect = (userAnswer === currentQ.correctAnswer);
 
-    // Store result for this question
     results[currentQuestionIndex] = {
         time: timeTaken,
         correct: isCorrect,
         questionText: currentQ.question,
         correctAnswer: currentQ.correctAnswer
     };
-    saveResultsToLocalStorage();
+    localStorage.setItem('triviaQuizResults', JSON.stringify(results));
 
     if (isCorrect) {
         currentScore++;
@@ -242,8 +254,6 @@ function handleSubmit() {
     setAnswersEnabled(false);
     submitBtn.disabled = true;
     isWaitingForNext = true;
-
-    // Auto-advance after 1.5 seconds
     setTimeout(async () => {
         if (currentQuestionIndex + 1 >= TOTAL_QUESTIONS) {
             endGame();
@@ -254,75 +264,44 @@ function handleSubmit() {
     }, 1500);
 }
 
-// ----- Reset quiz: fetch fresh questions, reset all state, clear stored results -----
-async function resetQuiz() {
-    if (feedbackTimeout) clearTimeout(feedbackTimeout);
+// ----- Restart quiz: show start screen again, clear stored data -----
+function restartQuiz() {
+    // Clear localStorage for questions and results
+    localStorage.removeItem('triviaQuizQuestions');
+    localStorage.removeItem('triviaQuizResults');
+    // Reset state
+    quizQuestions = [];
+    currentQuestionIndex = 0;
+    currentScore = 0;
+    results = new Array(TOTAL_QUESTIONS).fill(null);
+    questionAnswered = false;
     isWaitingForNext = false;
-    isFetching = true;
-    submitBtn.disabled = true;
-    setAnswersEnabled(false);
-    questionTextEl.textContent = 'Fetching new questions...';
-    feedbackDiv.textContent = '';
-
-    try {
-        // Clear localStorage for questions and results
-        localStorage.removeItem('triviaQuizQuestions');
-        localStorage.removeItem('triviaQuizResults');
-        // Fetch new set
-        const freshQuestions = await fetchTenQuestions(1);
-        quizQuestions = freshQuestions;
-        localStorage.setItem('triviaQuizQuestions', JSON.stringify(freshQuestions));
-        // Reset state
-        currentQuestionIndex = 0;
-        currentScore = 0;
-        results = new Array(TOTAL_QUESTIONS).fill(null);
-        questionAnswered = false;
-        updateUI();
-        displayCurrentQuestion();
-        showFeedback('🔄 Quiz restarted with fresh questions! Good luck.', false);
-    } catch (err) {
-        console.error('Reset failed:', err);
-        showFeedback('❌ Failed to fetch new questions. Please check your connection and try again.', true);
-        questionTextEl.textContent = '⚠️ Unable to load questions. Click Restart to retry.';
-        answersContainer.innerHTML = '';
-    } finally {
-        isFetching = false;
-        submitBtn.disabled = false;
-    }
+    // Show start screen, hide quiz content
+    startScreen.style.display = 'flex';
+    quizContent.style.display = 'none';
+    // Reset start button
+    startBtn.disabled = false;
+    startBtn.textContent = 'Start Quiz';
+    // Optionally restore previously selected preferences from localStorage
+    const savedDifficulty = localStorage.getItem('triviaQuizDifficulty');
+    const savedCategory = localStorage.getItem('triviaQuizCategory');
+    if (savedDifficulty) difficultySelect.value = savedDifficulty;
+    if (savedCategory) categorySelect.value = savedCategory;
+    showFeedback('Quiz reset. Choose your preferences and start again.', false);
 }
 
-// ----- Initial load -----
-async function init() {
-    isFetching = true;
-    submitBtn.disabled = true;
-    try {
-        quizQuestions = await loadOrFetchQuestions();
-        if (!quizQuestions || quizQuestions.length !== TOTAL_QUESTIONS) {
-            throw new Error('Invalid question set');
-        }
-        // Try to load previous results from localStorage (optional, but for consistency)
-        const storedResults = localStorage.getItem('triviaQuizResults');
-        if (storedResults) {
-            try {
-                const parsed = JSON.parse(storedResults);
-                if (Array.isArray(parsed) && parsed.length === TOTAL_QUESTIONS) {
-                    results = parsed;
-                    // Recalculate score from stored results
-                    currentScore = results.filter(r => r && r.correct === true).length;
-                }
-            } catch (e) {}
-        }
-        currentQuestionIndex = 0;
-        updateUI();
-        displayCurrentQuestion();
-    } catch (err) {
-        console.error('Init error:', err);
-        questionTextEl.textContent = '⚠️ Failed to load quiz. Please restart.';
-        showFeedback('❌ Could not load questions. Click Restart.', true);
-    } finally {
-        isFetching = false;
-        submitBtn.disabled = false;
-    }
+// ----- Initial load: show start screen, hide quiz content -----
+function init() {
+    startScreen.style.display = 'flex';
+    quizContent.style.display = 'none';
+    // Load saved preferences if any
+    const savedDifficulty = localStorage.getItem('triviaQuizDifficulty');
+    const savedCategory = localStorage.getItem('triviaQuizCategory');
+    if (savedDifficulty) difficultySelect.value = savedDifficulty;
+    if (savedCategory) categorySelect.value = savedCategory;
+    startBtn.addEventListener('click', startQuiz);
+    submitBtn.addEventListener('click', handleSubmit);
+    resetBtn.addEventListener('click', restartQuiz);
 }
 
 function escapeHtml(str) {
@@ -330,9 +309,5 @@ function escapeHtml(str) {
     return str.replace(/[&<>]/g, m => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;' }[m] || m));
 }
 
-// Event listeners
-submitBtn.addEventListener('click', handleSubmit);
-resetBtn.addEventListener('click', resetQuiz);
-
-// Start
+// Start the app
 init();

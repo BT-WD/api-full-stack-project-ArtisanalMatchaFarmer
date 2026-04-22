@@ -3,56 +3,146 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Trivia Quiz · No Next Button</title>
+    <title>Trivia Quiz · Custom Categories</title>
     <link rel="stylesheet" href="index.css">
     <style>
       .feedback-area:empty { display: none; }
+      
+      /* Start screen – normal block layout, no absolute positioning */
+      .start-screen {
+        background: rgba(44, 62, 78, 0.95);
+        backdrop-filter: blur(8px);
+        border-radius: 2rem;
+        padding: 2rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 500px;
+      }
+      .start-card {
+        background: white;
+        padding: 2rem;
+        border-radius: 2rem;
+        max-width: 400px;
+        width: 100%;
+        text-align: center;
+        box-shadow: 0 20px 35px rgba(0,0,0,0.2);
+        margin: 0 auto;
+      }
+      .start-card h2 {
+        margin-bottom: 1.5rem;
+        color: #2c3e4e;
+      }
+      .start-card select {
+        width: 100%;
+        padding: 0.75rem;
+        margin: 0.5rem 0 1rem;
+        border-radius: 2rem;
+        border: 1px solid #cbdde9;
+        font-family: inherit;
+        font-size: 1rem;
+        background: white;
+      }
+      .start-card button {
+        margin-top: 1rem;
+        width: 100%;
+      }
+      /* Quiz content hidden until start */
+      #quiz-content {
+        display: none;
+      }
     </style>
   </head>
   <body>
     <div class="quiz-app">
-      <header class="quiz-header">
-        <div class="brand">
-          <h1>📚 Trivia<span>API</span></h1>
-        </div>
-        <div class="score-mock">
-          <span class="score-label">⭐ SCORE</span>
-          <span id="quiz-score" class="score-value">0</span>
-        </div>
-      </header>
-
-      <div id="data-container">
-        <div class="meta-row">
-          <div class="meta-badge" id="category-display">
-            <span class="meta-icon">📂</span> Category: <strong>Science & Nature</strong>
-          </div>
-          <div class="meta-badge" id="difficulty-display">
-            <span class="meta-icon">⚙️</span> Difficulty: <strong>Medium</strong>
-          </div>
-          <div class="meta-badge" id="question-counter">
-            <span class="meta-icon">🔢</span> Question: <strong>0 / 10</strong>
-          </div>
-        </div>
-
-        <div class="question-card">
-          <p class="question-text" id="question-text">Loading...</p>
-        </div>
-
-        <div class="answers-section">
-          <div class="answers-list" id="answers-container"></div>
-        </div>
-
-        <div id="feedback-message" class="feedback-area"></div>
-
-        <div class="action-bar">
-          <button id="submit-btn" class="btn btn-primary">✔️ Submit answer</button>
-          <button id="reset-btn" class="btn btn-outline">⟳ Restart quiz</button>
+      <!-- Start Screen (visible initially) -->
+      <div id="start-screen" class="start-screen">
+        <div class="start-card">
+          <h2>📚 Trivia Quiz Setup</h2>
+          <label>Difficulty:</label>
+          <select id="difficulty-select">
+            <option value="">Any Difficulty</option>
+            <option value="easy">Easy</option>
+            <option value="medium">Medium</option>
+            <option value="hard">Hard</option>
+          </select>
+          <label>Category:</label>
+          <select id="category-select">
+            <option value="">Any Category</option>
+            <option value="9">General Knowledge</option>
+            <option value="10">Entertainment: Books</option>
+            <option value="11">Entertainment: Film</option>
+            <option value="12">Entertainment: Music</option>
+            <option value="13">Entertainment: Musicals & Theatres</option>
+            <option value="14">Entertainment: Television</option>
+            <option value="15">Entertainment: Video Games</option>
+            <option value="16">Entertainment: Board Games</option>
+            <option value="17">Science & Nature</option>
+            <option value="18">Science: Computers</option>
+            <option value="19">Science: Mathematics</option>
+            <option value="20">Mythology</option>
+            <option value="21">Sports</option>
+            <option value="22">Geography</option>
+            <option value="23">History</option>
+            <option value="24">Politics</option>
+            <option value="25">Art</option>
+            <option value="26">Celebrities</option>
+            <option value="27">Animals</option>
+            <option value="28">Vehicles</option>
+            <option value="29">Entertainment: Comics</option>
+            <option value="30">Science: Gadgets</option>
+            <option value="31">Entertainment: Japanese Anime & Manga</option>
+            <option value="32">Entertainment: Cartoon & Animations</option>
+          </select>
+          <button id="start-btn" class="btn btn-primary">Start Quiz</button>
         </div>
       </div>
 
-      <footer class="quiz-footer">
-        <p>Submit answer → auto‑load next question</p>
-      </footer>
+      <!-- Main quiz content (hidden initially) -->
+      <div id="quiz-content">
+        <header class="quiz-header">
+          <div class="brand">
+            <h1>📚 Trivia<span>API</span></h1>
+          </div>
+          <div class="score-mock">
+            <span class="score-label">⭐ SCORE</span>
+            <span id="quiz-score" class="score-value">0</span>
+          </div>
+        </header>
+
+        <div id="data-container">
+          <div class="meta-row">
+            <div class="meta-badge" id="category-display">
+              <span class="meta-icon">📂</span> Category: <strong>Science & Nature</strong>
+            </div>
+            <div class="meta-badge" id="difficulty-display">
+              <span class="meta-icon">⚙️</span> Difficulty: <strong>Medium</strong>
+            </div>
+            <div class="meta-badge" id="question-counter">
+              <span class="meta-icon">🔢</span> Question: <strong>0 / 10</strong>
+            </div>
+          </div>
+
+          <div class="question-card">
+            <p class="question-text" id="question-text">Loading...</p>
+          </div>
+
+          <div class="answers-section">
+            <div class="answers-list" id="answers-container"></div>
+          </div>
+
+          <div id="feedback-message" class="feedback-area"></div>
+
+          <div class="action-bar">
+            <button id="submit-btn" class="btn btn-primary">✔️ Submit answer</button>
+            <button id="reset-btn" class="btn btn-outline">⟳ Restart quiz</button>
+          </div>
+        </div>
+
+        <footer class="quiz-footer">
+          <p>10 questions stored locally · Timed answers · Fastest correct shown at the end</p>
+        </footer>
+      </div>
     </div>
     <script src="index.js"></script>
   </body>
